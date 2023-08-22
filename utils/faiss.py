@@ -3,6 +3,8 @@ from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
 from langchain.llms import OpenAI
 import os
+import shutil
+
 
 embeddings = OpenAIEmbeddings(
     openai_api_key="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")
@@ -33,6 +35,9 @@ def embed_index(doc_list, index_store, userid):
         faiss_db.save_local(folder_path=os.path.join("FAISS_INDEX_STORE",userid,index_store))
         print("New store created...")
 
+def remove_index(index_store, userid):
+    shutil.rmtree(os.path.join("FAISS_INDEX_STORE",userid,index_store))
+    print("index removed form local store successfully...")
 
 def convert_to_tuples(chat_list):
     chat_tuples = []

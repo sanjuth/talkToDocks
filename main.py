@@ -7,10 +7,10 @@ from typing import List
 from pydantic import BaseModel
 
 
-from utils.faiss import embed_index, infer
+from utils.faiss import embed_index, infer, remove_index
 from utils.file_split import file_split
-from utils.s3 import upload_file_to_s3
-from utils.dynamoDB import get_UserId, store_user_chats
+from utils.s3 import delete_file_from_s3, upload_file_to_s3
+from utils.dynamoDB import delete_user_chats, get_UserId, store_user_chats
 
 
 
@@ -89,6 +89,25 @@ async def func(email: str=Form(...),projectId: str=Form(...),query: str=Form(...
     return{
         "result": res
     }
+
+@app.post("/deleteChat")
+async def func(email: str=Form(...), projectId: str=Form(...)):
+    userid=get_UserId(email)
+    userid=email #TESTING PURPOSE REMOVE THIS LINE
+    if userid == 'Email does not exist':
+        return{
+            'message': userid
+        }
+    
+    try:
+        #deleting chat history in dynamoBD
+        delete_user_chats(userid,projectId)
+        #deleting pdf in S3 bucket
+        delete_file_from_s3(userid,projectId)
+        #deleting in local index store
+        remove_index(projectId,userid)
+    except:
+        print("something went wrong while removing the chat")
 
 
 if __name__ == "__main__":

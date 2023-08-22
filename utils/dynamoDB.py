@@ -58,7 +58,15 @@ def store_user_chats(userid,projectid,query,resp):
         print("Failed to Update chatHistroy", err)
     
     
+def delete_user_chats(userid, projectid):
+    try:
+        chathist_table.delete_item(
+            Key={'UserId': userid, 'ProjectId': projectid}
+        )
+        print("Chats deleted successfully")
 
+    except ClientError as err:
+        print("Failed to delete chats", err)
 
 
 # This is only once to create the table chat History table
