@@ -99,15 +99,12 @@ async def func(email: str=Form(...), projectId: str=Form(...)):
             'message': userid
         }
     
-    try:
-        #deleting chat history in dynamoBD
-        delete_user_chats(userid,projectId)
-        #deleting pdf in S3 bucket
-        delete_file_from_s3(userid,projectId)
-        #deleting in local index store
-        remove_index(projectId,userid)
-    except:
-        print("something went wrong while removing the chat")
+    #deleting chat history in dynamoBD
+    delete_user_chats(userid,projectId)
+    #deleting pdf in S3 bucket
+    delete_file_from_s3(userid,projectId)
+    #deleting in local index store
+    remove_index(projectId,userid)
 
 
 if __name__ == "__main__":

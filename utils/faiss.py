@@ -7,7 +7,7 @@ import shutil
 
 
 embeddings = OpenAIEmbeddings(
-    openai_api_key="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")
+    openai_api_key=os.getenv('OPENAI_API_KEY'))
 
 
 # index_store is projectID
@@ -22,9 +22,9 @@ def embed_index(doc_list, index_store, userid):
     try:
         faiss_db = FAISS.from_documents(doc_list, embeddings)
     except Exception as e:
-        faiss_db = FAISS.from_texts(doc_list,embeddings)
+        faiss_db = FAISS.from_texts(doc_list, embeddings)
 
-    if os.path.exists(os.path.join("FAISS_INDEX_STORE",userid,index_store)):
+    if os.path.exists(os.path.join("FAISS_INDEX_STORE", userid, index_store)):
         local_db = FAISS.load_local(index_store, embeddings)
         # merging the new embedding with the existing index store
         local_db.merge_from(faiss_db)
@@ -32,12 +32,18 @@ def embed_index(doc_list, index_store, userid):
         local_db.save_local(index_store)
         print("Updated index saved")
     else:
-        faiss_db.save_local(folder_path=os.path.join("FAISS_INDEX_STORE",userid,index_store))
+        faiss_db.save_local(folder_path=os.path.join(
+            "FAISS_INDEX_STORE", userid, index_store))
         print("New store created...")
 
+
 def remove_index(index_store, userid):
-    shutil.rmtree(os.path.join("FAISS_INDEX_STORE",userid,index_store))
-    print("index removed form local store successfully...")
+    try:
+        shutil.rmtree(os.path.join("FAISS_INDEX_STORE", userid, index_store))
+        print("index removed form local store successfully...")
+    except:
+        print("Failed to delete from local index")
+
 
 def convert_to_tuples(chat_list):
     chat_tuples = []
@@ -47,14 +53,16 @@ def convert_to_tuples(chat_list):
         chat_tuples.append((query, response))
     return chat_tuples
 
-def infer(index_store, userid, query,chatHistory):
-    history=convert_to_tuples(chatHistory)
-    if not os.path.exists(os.path.join("FAISS_INDEX_STORE",userid,index_store)):
+
+def infer(index_store, userid, query, chatHistory):
+    history = convert_to_tuples(chatHistory)
+    if not os.path.exists(os.path.join("FAISS_INDEX_STORE", userid, index_store)):
         return "Invalid project Id or email"
-    vectorstore = FAISS.load_local(os.path.join("FAISS_INDEX_STORE",userid,index_store), embeddings)
-    retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k":20})
-    qa = ConversationalRetrievalChain.from_llm(OpenAI(temperature=0,openai_api_key="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"), retriever)
+    vectorstore = FAISS.load_local(os.path.join(
+        "FAISS_INDEX_STORE", userid, index_store), embeddings)
+    retriever = vectorstore.as_retriever(
+        search_type="similarity", search_kwargs={"k": 20})
+    qa = ConversationalRetrievalChain.from_llm(OpenAI(
+        temperature=0, openai_api_key="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"), retriever)
     result = qa({"question": query, "chat_history": history})
     return result["answer"]
-
-

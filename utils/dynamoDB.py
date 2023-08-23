@@ -1,14 +1,15 @@
 import boto3
 import json
 from botocore.exceptions import ClientError
+import os
 
-AWS_ACCESS_KEY = "AKIAQKDC4DJEJYP4HOSF"
-AWS_SECRET_KEY = "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"
+AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
+AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')
 
 client_dynamo = boto3.resource('dynamodb',
-                            aws_access_key_id=AWS_ACCESS_KEY,
-                            aws_secret_access_key=AWS_SECRET_KEY,
-                            region_name='us-east-1')
+                               aws_access_key_id=AWS_ACCESS_KEY,
+                               aws_secret_access_key=AWS_SECRET_KEY,
+                               region_name='us-east-1')
 
 table = client_dynamo.Table('users-crito')
 chathist_table = client_dynamo.Table("ChatHistory")
@@ -31,10 +32,8 @@ def get_UserId(email_id):
     return user_id
 
 
+def store_user_chats(userid, projectid, query, resp):
 
-
-def store_user_chats(userid,projectid,query,resp):
-    
     chat_entry = {
         'Query': query,
         'Response': resp
@@ -46,7 +45,7 @@ def store_user_chats(userid,projectid,query,resp):
             ':empty_list': [],
             ':chat_entry': [chat_entry]
         }
-        
+
         chathist_table.update_item(
             Key={'UserId': userid, 'ProjectId': projectid},
             UpdateExpression=update_expression,
@@ -56,8 +55,22 @@ def store_user_chats(userid,projectid,query,resp):
 
     except ClientError as err:
         print("Failed to Update chatHistroy", err)
-    
-    
+
+
+def fetch_user_chats(userid, projectid):
+    try:
+        response = chathist_table.get_item(
+            Key={'UserId': userid, 'ProjectId': projectid}
+        )
+        item = response.get('Item', {})
+        chat_history = item.get('chats', [])
+        print(chat_history)
+        return chat_history
+    except ClientError as err:
+        print("Failed to retrieve chat history", err)
+        return []
+
+
 def delete_user_chats(userid, projectid):
     try:
         chathist_table.delete_item(
