@@ -16,6 +16,7 @@ client_dynamo = boto3.resource('dynamodb',
 
 table = client_dynamo.Table('users-crito')
 chathist_table = client_dynamo.Table("ChatHistory")
+userprojects_table = client_dynamo.Table("UserProjects")
 
 
 def get_UserId(email_id):
@@ -55,6 +56,8 @@ def store_user_chats(userid, projectid, query, resp):
             ExpressionAttributeValues=expression_values
         )
         print("Chat updated successfully")
+        # Updating in the user projects table
+        print(update_user_projects(userid, projectid))
 
     except ClientError as err:
         print("Failed to Update chatHistroy", err)
@@ -80,46 +83,66 @@ def delete_user_chats(userid, projectid):
             Key={'UserId': userid, 'ProjectId': projectid}
         )
         print("Chats deleted successfully")
+        # Updating in the user projects table
+        print(remove_user_project(userid, projectid))
 
     except ClientError as err:
         print("Failed to delete chats", err)
 
 
-# This is only once to create the table chat History table
+def check_project_limits(userid):
+    response = userprojects_table.get_item(Key={'UserId': userid})
+    item = response.get('Item', {})
+    proj_count = item.get('ProjectCount', 0)
+    print(proj_count)
+    if proj_count >= 5:
+        return False
+    return False
 
-# import boto3
 
-# dynamodb =boto3.resource('dynamodb',
-#                             aws_access_key_id=AWS_ACCESS_KEY,
-#                             aws_secret_access_key=AWS_SECRET_KEY,
-#                             region_name='us-east-1')
+def update_user_projects(userid, project_id):
+    response = userprojects_table.update_item(
+        Key={'UserId': userid},
+        UpdateExpression='SET ProjectCount = if_not_exists(ProjectCount, :zero) + :incr, ProjectIds = list_append(if_not_exists(ProjectIds, :empty_list), :project_id)',
+        ExpressionAttributeValues={
+            ':zero': 0,
+            ':incr': 1,
+            ':empty_list': [],
+            ':project_id': [project_id]
+        },
+        ReturnValues='UPDATED_NEW'
+    )
+    return response
 
-# table_name = 'ChatHistory'  # Replace this with your desired table name
 
-# # Define the attribute definitions for the table
-# attribute_definitions = [
-#     {'AttributeName': 'UserId', 'AttributeType': 'S'},
-#     {'AttributeName': 'SortKey', 'AttributeType': 'S'}
-# ]
+def remove_user_project(userid, project_id):
+    response = userprojects_table.get_item(Key={'UserId': userid})
+    item = response.get('Item', {})
 
-# # Define the primary key schema
-# key_schema = [
-#     {'AttributeName': 'UserId', 'KeyType': 'HASH'},    # Partition key
-#     {'AttributeName': 'SortKey', 'KeyType': 'RANGE'}   # Sort key
-# ]
+    if 'ProjectIds' in item:
+        project_ids = item['ProjectIds']
+        project_ids.remove(project_id)
 
-# # Define the provisioned throughput (adjust as needed)
-# provisioned_throughput = {
-#     'ReadCapacityUnits': 5,   # Adjust as needed
-#     'WriteCapacityUnits': 5   # Adjust as needed
-# }
+        response = userprojects_table.update_item(
+            Key={'UserId': userid},
+            UpdateExpression='SET ProjectCount = ProjectCount - :decr, ProjectIds = :proj_ids',
+            ExpressionAttributeValues={
+                ':decr': 1,
+                ':proj_ids': project_ids
+            },
+            ReturnValues='UPDATED_NEW'
+        )
 
-# # Create the DynamoDB table
-# response = dynamodb.create_table(
-#     TableName=table_name,
-#     AttributeDefinitions=attribute_definitions,
-#     KeySchema=key_schema,
-#     ProvisionedThroughput=provisioned_throughput
-# )
+        return response
+    else:
+        return None
 
-# print("Table creation response:", response)
+
+def fetch_user_projects(userid):
+    response = userprojects_table.get_item(Key={'UserId': userid})
+    item = response.get('Item', {})
+
+    if 'ProjectIds' in item:
+        return item['ProjectIds']
+    else:
+        return []
