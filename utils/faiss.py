@@ -2,12 +2,17 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.chains import ConversationalRetrievalChain
 from langchain.llms import OpenAI
+
 import os
 import shutil
+from dotenv.main import load_dotenv
 
+load_dotenv()
+
+OpenAI_KEY = os.environ["OPENAI_API_KEY"]
 
 embeddings = OpenAIEmbeddings(
-    openai_api_key=os.getenv('OPENAI_API_KEY'))
+    openai_api_key=OpenAI_KEY)
 
 
 # index_store is projectID
@@ -25,7 +30,8 @@ def embed_index(doc_list, index_store, userid):
         faiss_db = FAISS.from_texts(doc_list, embeddings)
 
     if os.path.exists(os.path.join("FAISS_INDEX_STORE", userid, index_store)):
-        local_db = FAISS.load_local(index_store, embeddings)
+        local_db = FAISS.load_local(os.path.join(
+            "FAISS_INDEX_STORE", userid, index_store), embeddings)
         # merging the new embedding with the existing index store
         local_db.merge_from(faiss_db)
         print("Merge completed")
@@ -47,6 +53,8 @@ def remove_index(index_store, userid):
 
 def convert_to_tuples(chat_list):
     chat_tuples = []
+    if not chat_list or len(chat_list) <= 1:
+        return chat_tuples
     for i in range(0, len(chat_list), 2):
         query = chat_list[i]
         response = chat_list[i + 1]
@@ -63,6 +71,6 @@ def infer(index_store, userid, query, chatHistory):
     retriever = vectorstore.as_retriever(
         search_type="similarity", search_kwargs={"k": 20})
     qa = ConversationalRetrievalChain.from_llm(OpenAI(
-        temperature=0, openai_api_key="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"), retriever)
+        temperature=0, openai_api_key=OpenAI_KEY), retriever)
     result = qa({"question": query, "chat_history": history})
     return result["answer"]

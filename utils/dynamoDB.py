@@ -1,10 +1,13 @@
 import boto3
 import json
-from botocore.exceptions import ClientError
 import os
+from dotenv.main import load_dotenv
+from botocore.exceptions import ClientError
 
-AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY')
-AWS_SECRET_KEY = os.getenv('AWS_SECRET_KEY')
+load_dotenv()
+
+AWS_ACCESS_KEY = os.environ["AWS_ACCESS_KEY"]
+AWS_SECRET_KEY = os.environ["AWS_SECRET_KEY"]
 
 client_dynamo = boto3.resource('dynamodb',
                                aws_access_key_id=AWS_ACCESS_KEY,
