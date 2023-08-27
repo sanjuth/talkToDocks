@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from utils.faiss import embed_index, infer, remove_index
 from utils.file_split import file_split
 from utils.s3 import delete_file_from_s3, upload_file_to_s3
-from utils.dynamoDB import delete_user_chats, get_UserId, store_user_chats
+from utils.dynamoDB import delete_user_chats, fetch_user_chats, get_UserId, store_user_chats
 
 
 
@@ -67,10 +67,6 @@ async def func(email: str=Form(...),projectId: str=Form(...),file: UploadFile = 
     }
 
 
-class StringListInput(BaseModel):
-    items: List[str]
-
-
 @app.post("/docChat")
 async def func(email: str=Form(...),projectId: str=Form(...),query: str=Form(...),chatHistory: List[str]=Form(...)):
     print(email)
@@ -89,6 +85,17 @@ async def func(email: str=Form(...),projectId: str=Form(...),query: str=Form(...
     return{
         "result": res
     }
+
+@app.post("/fetchChatHistory")
+async def func(email: str=Form(...),projectId: str=Form(...)):
+    userid=get_UserId(email)
+    userid=email #TESTING PURPOSE REMOVE THIS LINE
+    if userid == 'Email does not exist':
+        return{
+            'message': userid
+        }
+    return fetch_user_chats(userid,projectId)
+
 
 @app.post("/deleteChat")
 async def func(email: str=Form(...), projectId: str=Form(...)):

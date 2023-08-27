@@ -3,4 +3,4 @@ FAISS_INDEX_STORE/
 .vscode
 venv/
 ./extra/*
-./utils/__pycache__
+utils/__pycache__
