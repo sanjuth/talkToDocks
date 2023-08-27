@@ -1,0 +1,6 @@
+.env
+./FAISS_INDEX_STORE/*
+.vscode
+./venv
+./extra/*
+./utils/__pycache__
