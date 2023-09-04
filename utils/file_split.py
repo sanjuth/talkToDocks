@@ -1,3 +1,4 @@
+from langchain.document_loaders import UnstructuredExcelLoader
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders.csv_loader import CSVLoader
@@ -31,10 +32,15 @@ def get_text_splits(text_file):
 
 
 def get_csv_splits(csv_file):
-    csvLoader = CSVLoader(csv_file)
+    csvLoader = CSVLoader(csv_file,encoding="unicode_escape")
     csvdocs = csvLoader.load()
     return csvdocs
 
+def get_xlsx_splits(xlsx_file) :
+    loader = UnstructuredExcelLoader(xlsx_file)
+    docs = loader.load()
+    print("hello in xlsx")
+    return docs
 
 def get_ipynb_splits(notebook):
     with open(notebook) as fh:
@@ -74,3 +80,5 @@ def file_split(file_path, filename):
         return get_csv_splits(file_path)
     elif filename[-5:] == 'ipynb':
         return get_ipynb_splits(file_path)
+    elif file_type == 'xls' or filename[-4:] == 'xlsx':
+        return get_xlsx_splits(file_path)

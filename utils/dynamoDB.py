@@ -56,8 +56,6 @@ def store_user_chats(userid, projectid, query, resp):
             ExpressionAttributeValues=expression_values
         )
         print("Chat updated successfully")
-        # Updating in the user projects table
-        print(update_user_projects(userid, projectid))
 
     except ClientError as err:
         print("Failed to Update chatHistroy", err)
@@ -90,14 +88,18 @@ def delete_user_chats(userid, projectid):
         print("Failed to delete chats", err)
 
 
-def check_project_limits(userid):
+def check_project_limits(userid,projectid):
     response = userprojects_table.get_item(Key={'UserId': userid})
     item = response.get('Item', {})
     proj_count = item.get('ProjectCount', 0)
+    projects = item.get("ProjectIds",[])
+    print("projs ",projects)
     print(proj_count)
     if proj_count >= 5:
-        return False
-    return False
+        return (False,"User Projects limit reached")
+    if projectid in projects:
+        return (False,"Project already exists")
+    return True,""
 
 
 def update_user_projects(userid, project_id):
@@ -118,22 +120,25 @@ def update_user_projects(userid, project_id):
 def remove_user_project(userid, project_id):
     response = userprojects_table.get_item(Key={'UserId': userid})
     item = response.get('Item', {})
-
+    print(item)
     if 'ProjectIds' in item:
         project_ids = item['ProjectIds']
-        project_ids.remove(project_id)
+        if project_id in project_ids:
+            project_ids.remove(project_id)
 
-        response = userprojects_table.update_item(
-            Key={'UserId': userid},
-            UpdateExpression='SET ProjectCount = ProjectCount - :decr, ProjectIds = :proj_ids',
-            ExpressionAttributeValues={
-                ':decr': 1,
-                ':proj_ids': project_ids
-            },
-            ReturnValues='UPDATED_NEW'
-        )
+            response = userprojects_table.update_item(
+                Key={'UserId': userid},
+                UpdateExpression='SET ProjectCount = ProjectCount - :decr, ProjectIds = :proj_ids',
+                ExpressionAttributeValues={
+                    ':decr': 1,
+                    ':proj_ids': project_ids
+                },
+                ReturnValues='UPDATED_NEW'
+            )
 
-        return response
+            return response
+        return "project not found"
+
     else:
         return None
 

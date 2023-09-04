@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from utils.faiss import embed_index, infer, remove_index
 from utils.file_split import file_split
 from utils.s3 import delete_file_from_s3, upload_file_to_s3
-from utils.dynamoDB import check_project_limits, delete_user_chats, fetch_user_chats, fetch_user_projects, get_UserId, store_user_chats
+from utils.dynamoDB import check_project_limits, delete_user_chats, fetch_user_chats, fetch_user_projects, get_UserId, store_user_chats,update_user_projects
 
 
 app = FastAPI(
@@ -51,10 +51,11 @@ async def func(email: str = Form(...), projectId: str = Form(...), file: UploadF
         return {
             'message': userid
         }
-
-    if not check_project_limits(userid):
+    res = check_project_limits(userid,projectId)
+    print(res)
+    if not res[0]:
         return {
-            "message": "User Projects limit reached"
+            "message": res[1]
         }
 
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -67,6 +68,10 @@ async def func(email: str = Form(...), projectId: str = Form(...), file: UploadF
     split_file = file_split(temp_file_path, file.filename)
     embed_index(split_file, projectId, userid)
     print("Doctrain complete")
+
+    # Updating in the user projects table
+    print(update_user_projects(userid, projectId))
+    
     return {
         "message": "Doctrain success"
     }
