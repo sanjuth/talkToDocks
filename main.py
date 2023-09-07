@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from utils.faiss import embed_index, infer, remove_index
 from utils.file_split import file_split
 from utils.s3 import delete_file_from_s3, upload_file_to_s3
-from utils.dynamoDB import check_project_limits, delete_user_chats, fetch_user_chats, fetch_user_projects, get_UserId, store_user_chats,update_user_projects
+from utils.dynamoDB import check_project_limits, delete_user_chats, fetch_user_chats, fetch_user_projects, get_UserId, store_user_chats,update_user_projects,remove_user_project
 
 
 app = FastAPI(
@@ -40,7 +40,7 @@ def get_health():
 
 
 @app.post("/doctrain")
-async def func(email: str = Form(...), projectId: str = Form(...), file: UploadFile = File(...)):
+async def func(email: str = Form(...), projectId: str = Form(...), projDate: str = Form(...), file: UploadFile = File(...)):
     print(email)
     print(projectId)
     print(file.filename)
@@ -70,7 +70,7 @@ async def func(email: str = Form(...), projectId: str = Form(...), file: UploadF
     print("Doctrain complete")
 
     # Updating in the user projects table
-    print(update_user_projects(userid, projectId))
+    print(update_user_projects(userid, projectId, projDate))
     
     return {
         "message": "Doctrain success"
@@ -121,7 +121,7 @@ async def func(email: str = Form(...), projectId: str = Form(...)):
     return fetch_user_chats(userid, projectId)
 
 
-@app.post("/deleteChat")
+@app.post("/deleteUserProj")
 async def func(email: str = Form(...), projectId: str = Form(...)):
     userid = get_UserId(email)
     userid = email  # TESTING PURPOSE REMOVE THIS LINE
@@ -129,9 +129,10 @@ async def func(email: str = Form(...), projectId: str = Form(...)):
         return {
             'message': userid
         }
-
     # deleting chat history in dynamoBD
     delete_user_chats(userid, projectId)
+    # deleting user project
+    remove_user_project(userid, projectId)
     # deleting pdf in S3 bucket
     delete_file_from_s3(userid, projectId)
     # deleting in local index store
