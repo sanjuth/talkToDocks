@@ -102,21 +102,36 @@ def check_project_limits(userid, projectid):
 
 
 def update_user_projects(userid, project_id, project_date):
-    response = userprojects_table.update_item(
-        Key={'UserId': userid},
-        UpdateExpression='SET ProjectCount = if_not_exists(ProjectCount, :zero) + :incr, ProjectData.#project_id = :project_date',
-        ExpressionAttributeNames={
-            '#project_id': project_id,
-        },
-        ExpressionAttributeValues={
-            ':zero': 0,
-            ':incr': 1,
-            ':project_date': project_date,
-        },
-        ReturnValues='UPDATED_NEW'
-    )
+    try:
+        # Attempt to update the existing user's project
+        response = userprojects_table.update_item(
+            Key={'UserId': userid},
+            UpdateExpression='SET ProjectCount = if_not_exists(ProjectCount, :zero) + :incr, ProjectData.#project_id = :project_date',
+            ExpressionAttributeNames={
+                '#project_id': project_id,
+            },
+            ExpressionAttributeValues={
+                ':zero': 0,
+                ':incr': 1,
+                ':project_date': project_date,
+            },
+            ReturnValues='UPDATED_NEW'
+        )
 
-    return response
+        return response
+    except:
+        # If the user is not found, create a new entry
+        userprojects_table.put_item(
+            Item={
+                'UserId': userid,
+                'ProjectCount': 1,  # Initialize with one project
+                'ProjectData': {
+                    project_id: project_date
+                }
+            }
+        )
+        return "User created and project added successfully"
+
 
 
 def remove_user_project(userid, project_name):
