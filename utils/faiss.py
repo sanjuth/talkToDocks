@@ -9,7 +9,10 @@ from dotenv.main import load_dotenv
 
 load_dotenv()
 
-OpenAI_KEY = os.environ["OPENAI_API_KEY"]
+from utils.getKey import get_secret
+
+OpenAI_KEY = get_secret()
+# os.environ["OPENAI_API_KEY"]
 
 embeddings = OpenAIEmbeddings(
     openai_api_key=OpenAI_KEY)
@@ -30,8 +33,7 @@ def embed_index(doc_list, index_store, userid):
         faiss_db = FAISS.from_texts(doc_list, embeddings)
 
     if os.path.exists(os.path.join("FAISS_INDEX_STORE", userid, index_store)):
-        local_db = FAISS.load_local(os.path.join(
-            "FAISS_INDEX_STORE", userid, index_store), embeddings)
+        local_db = FAISS.load_local(os.path.join("FAISS_INDEX_STORE", userid, index_store), embeddings)
         # merging the new embedding with the existing index store
         local_db.merge_from(faiss_db)
         print("Merge completed")

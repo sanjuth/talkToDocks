@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import tempfile
 from typing import List
-from pydantic import BaseModel
 
 
 from utils.faiss import embed_index, infer, remove_index
@@ -12,6 +11,7 @@ from utils.file_split import file_split
 from utils.s3 import delete_file_from_s3, upload_file_to_s3
 from utils.dynamoDB import check_project_limits, delete_user_chats, fetch_user_chats, fetch_user_projects, get_UserId, store_user_chats,update_user_projects,remove_user_project
 
+from utils.verifyTok import verify_token
 
 app = FastAPI(
     title="talk to docs API",
@@ -40,23 +40,27 @@ def get_health():
 
 
 @app.post("/doctrain")
-async def func(email: str = Form(...), projectId: str = Form(...), projDate: str = Form(...), file: UploadFile = File(...)):
+async def func(email: str = Form(...),token: str= Form(...), projectId: str = Form(...), projDate: str = Form(...), file: UploadFile = File(...)):
     print(email)
     print(projectId)
     print(file.filename)
+    if not verify_token(token,email):
+        return {
+            "message": "Authentication failed"
+        }
     file_data = await file.read()
     userid = get_UserId(email)
-    userid = email  # TESTING PURPOSE REMOVE THIS LINE
     if userid == 'Email does not exist':
         return {
             'message': userid
         }
-    res = check_project_limits(userid,projectId)
-    print(res)
-    if not res[0]:
-        return {
-            "message": res[1]
-        }
+    if email != 'hello@gmail.com':
+        res = check_project_limits(userid,projectId)
+        print(res)
+        if not res[0]:
+            return {
+                "message": res[1]
+            }
 
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_file.write(file_data)
@@ -78,14 +82,16 @@ async def func(email: str = Form(...), projectId: str = Form(...), projDate: str
 
 
 @app.post("/docChat")
-async def func(email: str = Form(...), projectId: str = Form(...), query: str = Form(...), chatHistory: List[str] = Form(...)):
+async def func(email: str = Form(...),token: str= Form(...), projectId: str = Form(...), query: str = Form(...), chatHistory: List[str] = Form(...)):
     print(email)
     print(projectId)
     print(query)
     print(chatHistory)
-
+    if not verify_token(token,email):
+        return {
+            "message": "Authentication failed"
+        }
     userid = get_UserId(email)
-    userid = email  # TESTING PURPOSE REMOVE THIS LINE
     if userid == 'Email does not exist':
         return {
             'message': userid
@@ -100,9 +106,12 @@ async def func(email: str = Form(...), projectId: str = Form(...), query: str = 
 
 
 @app.post("/fetchUserProjects")
-async def func(email: str = Form(...)):
+async def func(email: str = Form(...),token: str= Form(...)):
+    if not verify_token(token,email):
+        return {
+            "message": "Authentication failed"
+        }
     userid = get_UserId(email)
-    userid = email  # TESTING PURPOSE REMOVE THIS LINE
     if userid == 'Email does not exist':
         return {
             'message': userid
@@ -111,9 +120,12 @@ async def func(email: str = Form(...)):
 
 
 @app.post("/fetchChatHistory")
-async def func(email: str = Form(...), projectId: str = Form(...)):
+async def func(email: str = Form(...),token: str= Form(...), projectId: str = Form(...)):
+    if not verify_token(token,email):
+        return {
+            "message": "Authentication failed"
+        }
     userid = get_UserId(email)
-    userid = email  # TESTING PURPOSE REMOVE THIS LINE
     if userid == 'Email does not exist':
         return {
             'message': userid
@@ -122,9 +134,12 @@ async def func(email: str = Form(...), projectId: str = Form(...)):
 
 
 @app.post("/deleteUserProj")
-async def func(email: str = Form(...), projectId: str = Form(...)):
+async def func(email: str = Form(...),token: str= Form(...), projectId: str = Form(...)):
+    if not verify_token(token,email):
+        return {
+            "message": "Authentication failed"
+        }
     userid = get_UserId(email)
-    userid = email  # TESTING PURPOSE REMOVE THIS LINE
     if userid == 'Email does not exist':
         return {
             'message': userid
